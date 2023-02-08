@@ -8,6 +8,9 @@ venv
 /frontend
 frontend
 
+/client
+client
+
 # /build
 # build
 
