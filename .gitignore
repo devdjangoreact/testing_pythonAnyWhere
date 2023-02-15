@@ -7,9 +7,14 @@ venv_pdf
 /venv_pdf
 # *.sqlite3
 
+parser
+/parser
 
 /frontend
 frontend
+
+/file_pdf
+file_pdf
 
 /client
 client
