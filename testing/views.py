@@ -4,9 +4,11 @@ from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status
 from rest_framework.views import APIView
+import json, random, string
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
 from .models import Category, HashTag, Test, SetTest, TestList, SetTestList
-from .serializers import CategorySerializer, HashTagSerializer, TestSerializer
+from .serializers import CategorySerializer, HashTagSerializer, TestSerializer, TestWithSetSerializer
 from .serializers  import  SetTestSerializer, TestListSerializer, SetTestListSerializer
 
 
@@ -14,9 +16,88 @@ from .serializers  import  SetTestSerializer, TestListSerializer, SetTestListSer
 class CategoryList(APIView):
     # permission_classes = [AllowAny,]
 
+    def upload_test_pdf(self, file):
+        
+        
+        f = open(file)
+        data_json = json.load(f)
+        try:
+            category = Category.objects.get(pk=1)
+        except:
+            category = Category.objects.create(title="title")
+        for text_item in data_json:       
+            test = Test.objects.create(category=category, description=text_item['question'] )
+            SetTest.objects.create(title= text_item['answer_a'],
+                                        test=test, 
+                                        description="test", 
+                                        choise=False,
+                                        sort='a')
+            SetTest.objects.create(title= text_item['answer_b'],
+                                        test=test, 
+                                        description="test", 
+                                        choise=False,
+                                        sort='b')
+            SetTest.objects.create(title= text_item['answer_c'],
+                                        test=test, 
+                                        description="test", 
+                                        choise=False,
+                                        sort='c')
+            SetTest.objects.create(title= text_item['answer_d'],
+                                        test=test, 
+                                        description="test", 
+                                        choise=False,
+                                        sort='d')
+            SetTest.objects.create(title= text_item['answer_e'],
+                                        test=test, 
+                                        description="test", 
+                                        choise=False,
+                                        sort='e')
+            SetTest.objects.create(title= text_item['answer_true'],
+                                       test=test, 
+                                        description="test", 
+                                        choise=True)
+        
+
+    def upload_testing_ukr(self, file):
+        
+        f = open(file)
+        data_json_full = json.load(f)
+        
+        for data_json in data_json_full: 
+
+            print(data_json['title'])
+            try:
+                hashTag = HashTag.objects.get(title=data_json['title'])
+            except:
+                hashTag = HashTag.objects.create(title= data_json['title'])
+                                                    
+            category = Category.objects.get(pk=1)
+
+            for text_item in data_json['questions']:       
+                test = Test.objects.create(
+                    category=category, 
+                    description=text_item['question'],
+                    nomber=text_item['nomber'])
+                
+                test.hashtag.add(hashTag)
+                
+                for text_item_answer in text_item['answers']:  
+                    SetTest.objects.create(title= str(text_item_answer['answer']),
+                                                test=test, 
+                                                description="test", 
+                                                choise=text_item_answer['choise'],
+                                                sort=text_item_answer['sort'])
+                
+
+
     def get(self, request, format=None):
         category = Category.objects.all()
         serializer = CategorySerializer(category, many=True)
+        
+        self.upload_test_pdf("/home/dev/testing_pythonAnyWhere/testing/source/data.json")
+        self.upload_testing_ukr('/home/dev/testing_pythonAnyWhere/testing/source/тестування.json')
+        self.upload_testing_ukr('/home/dev/testing_pythonAnyWhere/testing/source/format2.json')
+        self.upload_testing_ukr('/home/dev/testing_pythonAnyWhere/testing/source/format4.json')
         return Response(serializer.data)
 
     @swagger_auto_schema(
@@ -131,7 +212,7 @@ class HashTagDetail(APIView):
 
 
 # Test test TestSerializer
-class TestList(APIView):
+class TestListView(APIView):
     # permission_classes = [AllowAny,]
 
     def get(self, request, format=None):
@@ -193,8 +274,43 @@ class TestDetail(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+class TestWithSetView(APIView):
+    # permission_classes = [AllowAny,]
+
+    def get(self, request, format=None):
+        
+        query = request.query_params.get('keyword')
+        quantity = request.query_params.get('quantity')
+        
+        if query == None:
+            query = ''
+        
+        test = Test.objects.filter(description__icontains=query).order_by('id')
+        
+        paginator = Paginator(test, 1000)
+        page = request.query_params.get('page')
+        
+        try:
+            tests = paginator.page(page)
+        except PageNotAnInteger:
+            tests = paginator.page(1)
+        except EmptyPage:
+            tests = paginator.page(paginator.num_pages)
+        
+        if page == None:
+            page = 1
+        
+        serializer = TestWithSetSerializer(tests, many=True)
+        return Response({'tests': serializer.data, 'page': page, 'pages': paginator.num_pages})
+    
+    # def get(self, request, pk, format=None):
+    #     test = Test.objects.filter()
+    #     serializer = TestWithSetSerializer(test)
+    #     return Response(serializer.data)
+    
+    
 # SetTest settest SetTestSerializer
-class SetTestList(APIView):
+class SetTestListView(APIView):
     # permission_classes = [AllowAny,]
 
     def get(self, request, format=None):
@@ -264,8 +380,14 @@ class TestListList(APIView):
 
     def get(self, request, format=None):
         testlist = TestList.objects.all()
-        serializer = CategorySerializer(testlist, many=True)
-        return Response(serializer.data)
+        serializer = TestListSerializer(testlist, many=True)
+
+        for testlist_nom in serializer.data:
+            for test_nom in testlist_nom['choised']:
+                test = Test.objects.filter(pk=test_nom["test"])
+                test_nom["test"] = TestWithSetSerializer(test,many=True).data
+        
+        return Response(serializer.data) 
 
     @swagger_auto_schema(
         request_body=openapi.Schema(
@@ -343,7 +465,24 @@ class SetTestListList(APIView):
         )
     )
     def post(self, request, format=None):
-        serializer = SetTestListSerializer(data=request.data)
+        
+    
+        query = request.query_params.get('settest')
+        
+        settest = SetTest.objects.get(pk=int(query))
+        
+        test_list = TestList.objects.get(pk=1)
+        
+        print(settest, test_list, settest.test.id)
+        
+        
+        serializer = SetTestListSerializer(data={
+            'test_list':test_list.id,
+            'set_test':settest.id,
+            'test': settest.test.id,
+            'mark':False,
+            
+        })
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)

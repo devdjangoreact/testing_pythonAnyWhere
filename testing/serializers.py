@@ -23,21 +23,47 @@ class TestSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Test
-        fields = ["__all__"]
+        fields = "__all__"
         read_only_fields = (
             "id",
         )
+
 
 class SetTestSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = SetTest
-        fields = ["__all__"]
+        fields = "__all__"
         read_only_fields = (
             "id",
         )
 
+class TestWithSetSerializer(serializers.ModelSerializer):
+    choise = SetTestSerializer(many=True)
+    
+    class Meta:
+        model = Test
+        fields = "__all__"
+        read_only_fields = (
+            "id",
+        )
+
+
+class SetTestListSerializer(serializers.ModelSerializer):
+   
+    class Meta:
+        model = SetTestList
+        fields = "__all__"
+        read_only_fields = (
+            "id", 
+            "updated_date",
+        )
+
+
+
 class TestListSerializer(serializers.ModelSerializer):
+    choised = SetTestListSerializer(many=True)
+        
     class Meta:
         model = TestList
         fields = "__all__"
@@ -46,13 +72,4 @@ class TestListSerializer(serializers.ModelSerializer):
             "created_date",
             "updated_date",
         )
-
-class SetTestListSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = SetTestList
-        fields = "__all__"
-        read_only_fields = (
-            "id",
-            "updated_date",
-        )
-
+        

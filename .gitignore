@@ -2,6 +2,9 @@ __pycache__
 env
 venv
 /venv
+
+venv_pdf
+/venv_pdf
 # *.sqlite3
 
 
