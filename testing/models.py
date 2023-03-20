@@ -41,7 +41,7 @@ class TestList(models.Model):
 class SetTestList(models.Model):
     test_list = models.ForeignKey(TestList, on_delete=models.DO_NOTHING, blank=False,  related_name='choised' )
     test = models.ForeignKey(Test, on_delete=models.DO_NOTHING, blank=False, null=True)
-    set_test = models.ForeignKey(SetTest, on_delete=models.DO_NOTHING, blank=False)
+    set_test = models.ForeignKey(SetTest, on_delete=models.DO_NOTHING, blank=False, null=True)
     updated_date = models.DateTimeField(auto_now=True)
     mark = models.BooleanField(default=False)
     def __str__(self):

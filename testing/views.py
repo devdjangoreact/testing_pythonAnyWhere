@@ -6,6 +6,7 @@ from rest_framework import status
 from rest_framework.views import APIView
 import json, random, string
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.db import transaction
 
 from .models import Category, HashTag, Test, SetTest, TestList, SetTestList
 from .serializers import CategorySerializer, HashTagSerializer, TestSerializer, TestWithSetSerializer
@@ -94,10 +95,11 @@ class CategoryList(APIView):
         category = Category.objects.all()
         serializer = CategorySerializer(category, many=True)
         
-        self.upload_test_pdf("/home/dev/testing_pythonAnyWhere/testing/source/data.json")
-        self.upload_testing_ukr('/home/dev/testing_pythonAnyWhere/testing/source/тестування.json')
-        self.upload_testing_ukr('/home/dev/testing_pythonAnyWhere/testing/source/format2.json')
-        self.upload_testing_ukr('/home/dev/testing_pythonAnyWhere/testing/source/format4.json')
+        # self.upload_test_pdf("/home/dev/testing_pythonAnyWhere/testing/source/data.json")
+        # self.upload_testing_ukr('/home/dev/testing_pythonAnyWhere/testing/source/тестування.json')
+        # self.upload_testing_ukr('/home/dev/testing_pythonAnyWhere/testing/source/format2.json')
+        # self.upload_testing_ukr('/home/dev/testing_pythonAnyWhere/testing/source/format4.json')
+        self.upload_testing_ukr('/home/dev/projects/testing_pythonAnyWhere/testing/source/format5.json')
         return Response(serializer.data)
 
     @swagger_auto_schema(
@@ -188,6 +190,27 @@ class HashTagDetail(APIView):
         hashtag = self.get_object(pk)
         serializer = HashTagSerializer(hashtag)
         return Response(serializer.data)
+    
+    @transaction.atomic
+    def post(self, request, pk, format=None):
+        objhashtag = HashTag.objects.get(pk=pk)
+        # create test list
+        tests = Test.objects.filter(hashtag=objhashtag)  
+
+        objectTestList = TestList.objects.create(
+            title = objhashtag.title,
+            description = objhashtag.title + " опис",
+            quantity=tests.count()
+        )
+        # create set test list
+        for test in tests:
+            setTestLists = SetTestList.objects.create(
+                test_list=objectTestList,
+                test=test
+            )
+
+        return Response("created", status=status.HTTP_201_CREATED)
+
 
     @swagger_auto_schema(
         request_body=openapi.Schema(
@@ -381,12 +404,8 @@ class TestListList(APIView):
     def get(self, request, format=None):
         testlist = TestList.objects.all()
         serializer = TestListSerializer(testlist, many=True)
-
-        for testlist_nom in serializer.data:
-            for test_nom in testlist_nom['choised']:
-                test = Test.objects.filter(pk=test_nom["test"])
-                test_nom["test"] = TestWithSetSerializer(test,many=True).data
-        
+        all = request.GET.get('all')
+        print(all)        
         return Response(serializer.data) 
 
     @swagger_auto_schema(
@@ -419,7 +438,11 @@ class TestListDetail(APIView):
     def get(self, request, pk, format=None):
         testlist = self.get_object(pk)
         serializer = TestListSerializer(testlist)
-        return Response(serializer.data)
+        testlist_nom = serializer.data
+        for test_nom in testlist_nom['choised']:
+            test = Test.objects.filter(pk=test_nom["test"])
+            test_nom["test"] = TestWithSetSerializer(test,many=True).data
+        return Response([serializer.data])
 
     @swagger_auto_schema(
         request_body=openapi.Schema(
@@ -501,14 +524,26 @@ class SetTestListDetail(APIView):
         serializer = SetTestListSerializer(settestlist)
         return Response(serializer.data)
 
-
+    @swagger_auto_schema(
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                "test_list": openapi.Schema(type=openapi.TYPE_STRING),
+                "test": openapi.Schema(type=openapi.TYPE_STRING),
+                "set_test": openapi.Schema(type=openapi.TYPE_STRING),
+            },
+        )
+    )
     def put(self, request, pk, format=None):
         settestlist = self.get_object(pk)
-        serializer = SetTestListSerializer(settestlist, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        # serializer = SetTestListSerializer(settestlist, data=request.data)
+        # if serializer.is_valid():
+        #     serializer.save()
+        #     return Response(serializer.data)
+        set_test = SetTest.objects.get(id=request.data['params']['id'])
+        settestlist.set_test = set_test
+        settestlist.save()
+        return Response("updated", status=status.HTTP_200_OK)
 
     def delete(self, request, pk, format=None):
         settestlist = self.get_object(pk)
