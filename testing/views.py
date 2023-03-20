@@ -66,7 +66,7 @@ class CategoryList(APIView):
         
         for data_json in data_json_full: 
 
-            print(data_json['title'])
+   
             try:
                 hashTag = HashTag.objects.get(title=data_json['title'])
             except:
@@ -405,7 +405,7 @@ class TestListList(APIView):
         testlist = TestList.objects.all()
         serializer = TestListSerializer(testlist, many=True)
         all = request.GET.get('all')
-        print(all)        
+     
         return Response(serializer.data) 
 
     @swagger_auto_schema(
@@ -496,7 +496,7 @@ class SetTestListList(APIView):
         
         test_list = TestList.objects.get(pk=1)
         
-        print(settest, test_list, settest.test.id)
+  
         
         
         serializer = SetTestListSerializer(data={
