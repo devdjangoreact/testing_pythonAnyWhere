@@ -11,6 +11,7 @@ from django.db import transaction
 from .models import Category, HashTag, Test, SetTest, TestList, SetTestList
 from .serializers import CategorySerializer, HashTagSerializer, TestSerializer, TestWithSetSerializer
 from .serializers  import  SetTestSerializer, TestListSerializer, SetTestListSerializer
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
 
 # Category
@@ -310,7 +311,7 @@ class TestWithSetView(APIView):
         
         test = Test.objects.filter(description__icontains=query).order_by('id')
         
-        paginator = Paginator(test, 1000)
+        paginator = Paginator(test, quantity)
         page = request.query_params.get('page')
         
         try:
